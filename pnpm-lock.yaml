@@ -1,0 +1,30 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      '@webgpu/types':
+        specifier: ^0.1.69
+        version: 0.1.69
+      wgpu-matrix:
+        specifier: ^3.4.2
+        version: 3.4.2
+
+packages:
+
+  '@webgpu/types@0.1.69':
+    resolution: {integrity: sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ==}
+
+  wgpu-matrix@3.4.2:
+    resolution: {integrity: sha512-IfZFbG7olEYBD76VCZy2TzqM57GKy3LT++AZh37tMHPPByO6R2h61zXGBZFNPi2IzxNivNi8y5dvze5PjaczjA==}
+
+snapshots:
+
+  '@webgpu/types@0.1.69': {}
+
+  wgpu-matrix@3.4.2: {}
