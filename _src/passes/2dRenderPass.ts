@@ -66,6 +66,5 @@ fn frag_main() -> @location(0) vec4<f32> {
         pass.drawIndexed(6, 1, 0, 0, 0);
 
         pass.end();
-
     }
 }

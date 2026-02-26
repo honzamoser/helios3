@@ -65,53 +65,38 @@ export function createDiamond(): {
 
 export function createCube(): {
   vertices: Float32Array;
-  indices: Uint32Array;
+  indices: Uint16Array;
   normals: Float32Array;
 } {
-  // 24 vertices (4 per face * 6 faces) to support flat shading (unique normals per face)
+  // 8 vertices of a cube
   const vertices = new Float32Array([
-    // Front face (z = 0.5)
-    -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5, 0.5, -0.5, 0.5, 0.5,
-    // Back face (z = -0.5)
-    0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5,
-    // Top face (y = 0.5)
-    -0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, -0.5, -0.5, 0.5, -0.5,
-    // Bottom face (y = -0.5)
-    -0.5, -0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5,
-    // Right face (x = 0.5)
-    0.5, -0.5, 0.5, 0.5, -0.5, -0.5, 0.5, 0.5, -0.5, 0.5, 0.5, 0.5,
-    // Left face (x = -0.5)
-    -0.5, -0.5, -0.5, -0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5, -0.5,
+    -1, -1, -1, // Vertex 0
+    1, -1, -1, // Vertex 1
+    1, 1, -1, // Vertex 2
+    -1, 1, -1, // Vertex 3
+    -1, -1, 1, // Vertex 4
+    1, -1, 1, // Vertex 5
+    1, 1, 1, // Vertex 6
+    -1, 1, 1, // Vertex 7
   ]);
 
-  const indices = new Uint32Array([
-    // Front
+  const indices = new Uint16Array([
+    // Front face
     0, 1, 2, 0, 2, 3,
-    // Back
+    // Back face
     4, 5, 6, 4, 6, 7,
-    // Top
-    8, 9, 10, 8, 10, 11,
-    // Bottom
-    12, 13, 14, 12, 14, 15,
-    // Right
-    16, 17, 18, 16, 18, 19,
-    // Left
-    20, 21, 22, 20, 22, 23,
+    // Left face
+    0, 3, 7, 0, 7, 4,
+    // Right face
+    1, 5, 6, 1, 6, 2,
+    // Top face
+    3, 2, 6, 3, 6, 7,
+    // Bottom face
+    0, 1, 5, 0, 5, 4,
   ]);
 
   const normals = new Float32Array([
-    // Front (0, 0, 1)
-    0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1,
-    // Back (0, 0, -1)
-    0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1,
-    // Top (0, 1, 0)
-    0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
-    // Bottom (0, -1, 0)
-    0, -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0,
-    // Right (1, 0, 0)
-    1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0,
-    // Left (-1, 0, 0)
-    -1, 0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0,
+
   ]);
 
   return {

@@ -1,38 +1,19 @@
 /// <reference types="@webgpu/types" />
 
 import { Renderer } from "./renderer";
+import { createCube } from "./primitive";
+import { quat, vec3 } from "wgpu-matrix";
 
-const devMode = true;
+const canvas = document.getElementById("screen") as HTMLCanvasElement;
 
-if (devMode) {
-    const renderer = new Renderer();
+const renderer = new Renderer(canvas);
+renderer.initalize().then(() => {
+    console.log("Renderer initialized successfully.");
 
-    await renderer.initialize(document.getElementById("screen") as HTMLCanvasElement);
-    // renderer.t_renderTriangle()
+    const cube = createCube();
+    const cubeMeshHadnle = renderer.registerMesh(cube.vertices, cube.indices, cube.normals);
 
+    const sceneObject = renderer.Scene.addObject(cubeMeshHadnle, 0, vec3.create(0, 0, 0), quat.fromEuler(0, 45, 0, "xyz"), vec3.create(0.5, 0.5, 0.5));
 
-
-    // square
-    renderer.uploadMesh({
-        vertices: new Float32Array([
-            -0.5, 0.5, 0.0,
-            0.5, 0.5, 0.0,
-            0.5, -0.5, 0.0,
-            -0.5, -0.5, 0.0
-        ]),
-        indices: new Uint16Array([0, 1, 2, 2, 0, 3])
-    })
-
-    //triangle
-    renderer.uploadMesh({
-        vertices: new Float32Array([
-            0.0, 1, 0.0,
-            -0.5, -0.5, 0.0,
-            0.5, -0.5, 0.0
-        ]),
-        indices: new Uint16Array([0, 1, 2])
-     })
-
-    // renderer.t_renderTriangle();
-    renderer.render()
-}
+    renderer.render();
+})
