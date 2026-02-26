@@ -82,7 +82,7 @@ export class Renderer {
 
         // Temporary camera buffer data (4x4 view-projection matrix)
 
-        this.UniformBuffer.viewProjectionMatrix = mat4.mul(this.Camera.viewMatrix, this.Scene.scene[0].matrix);
+        
 
         // Create depth texture for proper depth testing
         const depthTexture = this.GPUDevice.createTexture({
@@ -118,7 +118,7 @@ export class Renderer {
         @fragment
         fn frag_main(@location(0) fragPosition: vec4<f32>) -> @location(0) vec4<f32> {
             
-            return vec4<f32>(fragPosition.x, fragPosition.y, fragPosition.z, 1.0);
+            return vec4<f32>(fragPosition.x * 2, fragPosition.y * 2, fragPosition.z * 2, 1.0);
         }
         `
         });
@@ -166,24 +166,7 @@ export class Renderer {
             }
         });
 
-        const commandEncoder = this.GPUDevice.createCommandEncoder();
-        const renderPass = commandEncoder.beginRenderPass({
-            colorAttachments: [{
-                view: this.GPUContext.getCurrentTexture().createView(),
-                clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
-                loadOp: "clear",
-                storeOp: "store"
-            }],
-            depthStencilAttachment: {
-                view: depthTexture.createView(),
-                depthClearValue: 1.0,
-                depthLoadOp: "clear",
-                depthStoreOp: "store",
-            }
-        });
-
-        renderPass.setPipeline(pipeline);
-        renderPass.setBindGroup(0, this.GPUDevice.createBindGroup({
+        const bg = this.GPUDevice.createBindGroup({
             layout: pipeline.getBindGroupLayout(0),
             entries: [{
                 binding: 0,
@@ -193,22 +176,53 @@ export class Renderer {
                     size: 64
                 }
             }]
-        }));
+        })
+
+        let frame = () => {
+
+            mat4.rotateY(this.Scene.scene[0].matrix, 0.01, this.Scene.scene[0].matrix);
+            mat4.rotateX(this.Scene.scene[0].matrix, 0.02, this.Scene.scene[0].matrix);
+            mat4.rotateZ(this.Scene.scene[0].matrix, 0.04, this.Scene.scene[0].matrix);
+            this.UniformBuffer.viewProjectionMatrix = mat4.mul(this.Camera.viewMatrix, this.Scene.scene[0].matrix);
+
+            const commandEncoder = this.GPUDevice.createCommandEncoder();
+            const renderPass = commandEncoder.beginRenderPass({
+                colorAttachments: [{
+                    view: this.GPUContext.getCurrentTexture().createView(),
+                    clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
+                    loadOp: "clear",
+                    storeOp: "store"
+                }],
+                depthStencilAttachment: {
+                    view: depthTexture.createView(),
+                    depthClearValue: 1.0,
+                    depthLoadOp: "clear",
+                    depthStoreOp: "store",
+                }
+            });
+
+            renderPass.setPipeline(pipeline);
+            renderPass.setBindGroup(0, bg);
 
 
-        renderPass.setVertexBuffer(0, this.MeshRegistry.vertexBuffer);
-        renderPass.setIndexBuffer(this.MeshRegistry.indexBuffer, "uint16");
+            renderPass.setVertexBuffer(0, this.MeshRegistry.vertexBuffer);
+            renderPass.setIndexBuffer(this.MeshRegistry.indexBuffer, "uint16");
 
-        for (const object of this.Scene.scene) {
-            const mesh = this.MeshRegistry.getMeshData(object.meshHandle);
-            if (!mesh) continue;
+            for (const object of this.Scene.scene) {
+                const mesh = this.MeshRegistry.getMeshData(object.meshHandle);
+                if (!mesh) continue;
 
-            // TODO: The offset and size values are inverted
-            renderPass.drawIndexed(mesh.indexOffset, 1, 0, 0, 0);
+                // TODO: The offset and size values are inverted
+                renderPass.drawIndexed(mesh.indexOffset, 1, 0, 0, 0);
+            }
+
+            renderPass.end();
+            this.GPUDevice.queue.submit([commandEncoder.finish()]);
+
+            requestAnimationFrame(frame.bind(this));
         }
 
-        renderPass.end();
-        this.GPUDevice.queue.submit([commandEncoder.finish()]);
+        requestAnimationFrame(frame.bind(this));
     }
 
     checkReadyState(): asserts this is this & {
