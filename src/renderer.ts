@@ -2,7 +2,9 @@ import { mat4, vec3 } from "wgpu-matrix";
 import { Camera } from "./components/camera";
 import { MeshRegistry } from "./components/meshRegistry";
 import { RenderState } from "./components/renderState";
+import { ShaderManager } from "./components/shaderManager";
 import { UniformBuffer } from "./components/uniformBuffer";
+import { RenderPass3D } from "./passes/3DRenderPass";
 
 
 export class Renderer {
@@ -18,6 +20,7 @@ export class Renderer {
     Camera: Camera;
 
     UniformBuffer: UniformBuffer | null = null;
+    ShaderManager: ShaderManager = new ShaderManager();
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -25,7 +28,7 @@ export class Renderer {
             this.canvas.width / this.canvas.height);
     }
 
-    public async initalize() {
+    public async initalize(): Promise<void> {
         if (!navigator.gpu) {
             throw new Error("WebGPU is not supported in this browser.");
         }
@@ -71,158 +74,18 @@ export class Renderer {
         return this.MeshRegistry.registerMesh(vertexData, indexData, normalData, uv0Data);
     }
 
+    pass = new RenderPass3D();
 
-
-    public render() {
-        // Temporarily hard coded 3D rendering logic
-        // To be replaced with render graph
-
-        // Ensures that all the dependencies are initialized before rendering
-        this.checkReadyState();
-
-        // Temporary camera buffer data (4x4 view-projection matrix)
-
-        
-
-        // Create depth texture for proper depth testing
-        const depthTexture = this.GPUDevice.createTexture({
-            size: [this.canvas.width, this.canvas.height],
-            format: "depth24plus",
-            usage: GPUTextureUsage.RENDER_ATTACHMENT,
-        });
-
-
-
-        const shaderModule = this.GPUDevice.createShaderModule({
-            code: `
-        struct Uniforms {
-            viewProjection: mat4x4<f32>
-        };
-        
-        struct VertexOutput {
-            @builtin(position) position: vec4<f32>,
-            @location(0) fragPosition: vec4<f32>
-        }
-
-        
-        @group(0) @binding(0) var<uniform> uniforms: Uniforms;
-        
-        @vertex
-        fn main(@location(0) position: vec3<f32>) -> VertexOutput {
-            var output: VertexOutput;
-            output.position = uniforms.viewProjection * vec4<f32>(position, 1.0);
-            output.fragPosition = output.position;
-            return output;
-        }
-            
-        @fragment
-        fn frag_main(@location(0) fragPosition: vec4<f32>) -> @location(0) vec4<f32> {
-            
-            return vec4<f32>(fragPosition.x * 2, fragPosition.y * 2, fragPosition.z * 2, 1.0);
-        }
-        `
-        });
-
-        const layout = this.GPUDevice.createPipelineLayout({
-            bindGroupLayouts: [
-                this.GPUDevice.createBindGroupLayout({
-                    entries: [{
-                        binding: 0,
-                        visibility: GPUShaderStage.VERTEX,
-                        buffer: {
-                            type: "uniform"
-                        }
-                    }]
-                })
-            ]
-        });
-
-        const pipeline = this.GPUDevice.createRenderPipeline({
-            layout,
-            vertex: {
-                module: shaderModule,
-                entryPoint: "main",
-                buffers: [{
-                    arrayStride: 3 * Float32Array.BYTES_PER_ELEMENT,
-                    attributes: [
-                        { shaderLocation: 0, offset: 0, format: "float32x3" }
-                    ]
-                }]
-            },
-            fragment: {
-                module: shaderModule,
-                entryPoint: "frag_main",
-                targets: [{
-                    format: this.GPUFormat
-                }]
-            },
-            primitive: {
-                topology: "triangle-list"
-            },
-            depthStencil: {
-                format: "depth24plus",
-                depthWriteEnabled: true,
-                depthCompare: "less",
-            }
-        });
-
-        const bg = this.GPUDevice.createBindGroup({
-            layout: pipeline.getBindGroupLayout(0),
-            entries: [{
-                binding: 0,
-                resource: {
-                    buffer: this.UniformBuffer.buffer!,
-                    offset: 0,
-                    size: 64
-                }
-            }]
-        })
+    public render(): void {
 
         let frame = () => {
 
-            mat4.rotateY(this.Scene.scene[0].matrix, 0.01, this.Scene.scene[0].matrix);
-            mat4.rotateX(this.Scene.scene[0].matrix, 0.02, this.Scene.scene[0].matrix);
-            mat4.rotateZ(this.Scene.scene[0].matrix, 0.04, this.Scene.scene[0].matrix);
-            this.UniformBuffer.viewProjectionMatrix = mat4.mul(this.Camera.viewMatrix, this.Scene.scene[0].matrix);
-
-            const commandEncoder = this.GPUDevice.createCommandEncoder();
-            const renderPass = commandEncoder.beginRenderPass({
-                colorAttachments: [{
-                    view: this.GPUContext.getCurrentTexture().createView(),
-                    clearValue: { r: 1.0, g: 1.0, b: 1.0, a: 1.0 },
-                    loadOp: "clear",
-                    storeOp: "store"
-                }],
-                depthStencilAttachment: {
-                    view: depthTexture.createView(),
-                    depthClearValue: 1.0,
-                    depthLoadOp: "clear",
-                    depthStoreOp: "store",
-                }
-            });
-
-            renderPass.setPipeline(pipeline);
-            renderPass.setBindGroup(0, bg);
-
-
-            renderPass.setVertexBuffer(0, this.MeshRegistry.vertexBuffer);
-            renderPass.setIndexBuffer(this.MeshRegistry.indexBuffer, "uint16");
-
-            for (const object of this.Scene.scene) {
-                const mesh = this.MeshRegistry.getMeshData(object.meshHandle);
-                if (!mesh) continue;
-
-                // TODO: The offset and size values are inverted
-                renderPass.drawIndexed(mesh.indexOffset, 1, 0, 0, 0);
-            }
-
-            renderPass.end();
-            this.GPUDevice.queue.submit([commandEncoder.finish()]);
+            this.pass.execute(this);
 
             requestAnimationFrame(frame.bind(this));
         }
 
-        requestAnimationFrame(frame.bind(this));
+        requestAnimationFrame(frame.bind(this)); 
     }
 
     checkReadyState(): asserts this is this & {
